@@ -7,6 +7,8 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/vision_layers.hpp"
+#include <iostream>
+using namespace std;
 
 namespace caffe {
 
@@ -53,6 +55,8 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     vector<float> match_cost;
     vector<float> loss_mat;
+    Dtype weigths[] = {1,2,1,2};
+    vector<Dtype> match_weights(weigths, weigths + sizeof(weigths) / sizeof(float) );
     const int height = bottom[0]->height();
     for (int i = 0; i < num_pred; ++i) {
       for (int j = 0; j < num_pred; ++j) {
@@ -63,10 +67,22 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         for (int c = 0; c < channels; ++c) {
           const Dtype pred_value = box_pred_data[offset + c * height + i];
           const Dtype label_value = boxes_data[offset + c * height + j];
-          match_cost[idx] += fabs(pred_value - label_value) / 2000.;
-          loss_mat[idx] += fabs(pred_value - label_value);
+          Dtype val = pred_value - label_value;
+          Dtype abs_val = fabs(val);
+          if (c > 2){
+            match_cost[idx] += fabs(exp(pred_value) - exp(label_value)) * match_weights[c];
+          }
+          else{
+            match_cost[idx] += fabs(pred_value - label_value) * match_weights[c];
+          }
+          if (abs_val < 1){
+            loss_mat[idx] += (0.5 * val * val);
+          }
+          else{
+            loss_mat[idx] += (abs_val - 0.5);
+          }
         }
-        CHECK_LT(match_cost[idx], 0.9);
+        //CHECK_LT(match_cost[idx], 0.9);
         match_cost[idx] += i;
         const int c_x = 0;
         const int c_y = 1;
@@ -87,16 +103,15 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         } else {
           ratio = 1.0;
         }
-
-        if (fabs(pred_x - label_x) / label_w > ratio ||
-            fabs(pred_y - label_y) / label_h > ratio) {
+        if (fabs(pred_x - label_x) / exp(label_w) > ratio ||
+            fabs(pred_y - label_y) / exp(label_h) > ratio) {
           match_cost[idx] += 100;
         }
       }
     }
 
 
-    double max_pair_cost = 0;
+    float max_pair_cost = 0;
     for (int i = 0; i < num_pred; ++i) {
       for (int j = 0; j < num_pred; ++j) {
         const int idx = i * num_pred + j;
@@ -113,6 +128,7 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
             match_cost[idx] / max_pair_cost * Dtype(INT_MAX) / 2.);
       }
     }
+
 
     std::vector<int> assignment;
 
@@ -181,8 +197,10 @@ void HungarianLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       for (int c = 0; c < channels; ++c) {
         const Dtype pred_value = box_pred_data[offset + c * height + i];
         const Dtype label_value = boxes_data[offset + c * height + j];
+        Dtype val = pred_value - label_value;
+        Dtype abs_val = fabs(val);
         box_pred_diff[offset + c * height + i] = top_diff[0] * (
-            pred_value > label_value ? Dtype(1.) : Dtype(-1.)) / batch_size;
+            (abs_val< 1)  ? Dtype(val) : ((Dtype(0) < val) - (val < Dtype(0)))) / batch_size;
       }
     }
   }
