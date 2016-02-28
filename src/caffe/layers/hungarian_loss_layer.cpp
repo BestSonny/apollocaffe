@@ -7,6 +7,7 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/vision_layers.hpp"
+#include "caffe/loss_layers.hpp"
 #include <iostream>
 using namespace std;
 
@@ -20,6 +21,10 @@ void HungarianLossLayer<Dtype>::Reshape(
   top[1]->Reshape(bottom[2]->shape());
   top[2]->Reshape(bottom[2]->shape());
   match_ratio_ = this->layer_param_.hungarian_loss_param().match_ratio();
+  height_ = this->layer_param_.hungarian_loss_param().height();
+  width_ = this->layer_param_.hungarian_loss_param().width();
+  CHECK_GT(height_,Dtype(0));
+  CHECK_GT(width_,Dtype(0));
   if (this->layer_param_.loss_weight_size() == 1) {
     this->layer_param_.add_loss_weight(Dtype(0));
     this->layer_param_.add_loss_weight(Dtype(0));
@@ -69,12 +74,36 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
           const Dtype label_value = boxes_data[offset + c * height + j];
           Dtype val = pred_value - label_value;
           Dtype abs_val = fabs(val);
+          /*
           if (c > 2){
             match_cost[idx] += fabs(exp(pred_value) - exp(label_value)) * match_weights[c];
           }
           else{
             match_cost[idx] += fabs(pred_value - label_value) * match_weights[c];
           }
+          */
+
+          if (c == 0){
+            Dtype real_pred_value = pred_value*this->width_;
+            Dtype real_label_value = label_value*this->width_;
+            match_cost[idx] += fabs(real_pred_value - real_label_value) / 2000.;
+          }
+          else if(c == 1){
+            Dtype real_pred_value = pred_value*this->height_;
+            Dtype real_label_value = label_value*this->height_;
+            match_cost[idx] += fabs(real_pred_value - real_label_value) / 2000.;
+          }
+          else if (c == 2){
+            Dtype real_pred_value = exp(pred_value)*this->width_;
+            Dtype real_label_value = exp(label_value)*this->width_;
+            match_cost[idx] += fabs(real_pred_value - real_label_value) / 2000.;
+          }
+          else if(c == 3){
+            Dtype real_pred_value = exp(pred_value)*this->height_;
+            Dtype real_label_value = exp(label_value)*this->height_;
+            match_cost[idx] += fabs(real_pred_value - real_label_value) / 2000.;
+          }
+
           if (abs_val < 1){
             loss_mat[idx] += (0.5 * val * val);
           }
@@ -82,8 +111,6 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
             loss_mat[idx] += (abs_val - 0.5);
           }
         }
-        //CHECK_LT(match_cost[idx], 0.9);
-        match_cost[idx] += i;
         const int c_x = 0;
         const int c_y = 1;
         const int c_w = 2;
@@ -96,6 +123,9 @@ void HungarianLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         const Dtype label_y = boxes_data[offset + c_y * num_pred + j];
         const Dtype label_w = boxes_data[offset + c_w * num_pred + j];
         const Dtype label_h = boxes_data[offset + c_h * num_pred + j];
+
+        //CHECK_LT(match_cost[idx], 0.9);
+        match_cost[idx] += i;
 
         float ratio;
         if (this->phase_ == TRAIN) {

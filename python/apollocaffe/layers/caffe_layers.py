@@ -45,11 +45,11 @@ class Deconvolution(Convolution):
 
         del kwargs['kernel_dim']
         del kwargs['num_output']
-            
+
         l = Convolution(name, kernel_dim, num_output, None, None, **kwargs)
         self.p = l.p
         self.p.type = 'Deconvolution'
-       
+
 
 class Dropout(Layer):
     def __init__(self, name, dropout_ratio, **kwargs):
@@ -161,6 +161,22 @@ class Pooling(Layer):
                 self.p.pooling_param.pool = caffe_pb2.PoolingParameter.STOCHASTIC
             else:
                 raise ValueError('Unknown pooling method')
+
+class SPP(Layer):
+    def __init__(self, name, pool='MAX',pyramid_height=1, **kwargs):
+        super(SPP, self).__init__(self, name, kwargs)
+        assert(pyramid_height>=1)
+        self.p.spp_param.pyramid_height = pyramid_height
+        if pool is not None:
+            if pool == 'MAX':
+                self.p.spp_param.pool = caffe_pb2.SPPParameter.MAX
+            elif pool == 'AVE':
+                self.p.spp_param.pool = caffe_pb2.SPPParameter.AVE
+            elif pool == 'STOCHASTIC':
+                self.p.spp_param.pool = caffe_pb2.SPPParameter.STOCHASTIC
+            else:
+                raise ValueError('Unknown SPP method')
+
 
 class Power(Layer):
     def __init__(self, name, **kwargs):

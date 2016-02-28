@@ -412,6 +412,8 @@ class HungarianLossLayer : public LossLayer<Dtype> {
   vector<vector<int> > assignments_;
   vector<int> num_gt_;
   float match_ratio_;
+  float height_;
+  float width_;
 };
 
 /**

@@ -81,7 +81,7 @@ cdef class Tensor:
     def norm(self):
         return self.dot(self) ** 0.5 / reduce(lambda x, y: x * y, self.shape)
     def cosine(self, other):
-        num = self.dot(other) 
+        num = self.dot(other)
         denom = (self.dot(self) * other.dot(other)) ** 0.5
         if denom > 0.:
             return 1 - num / denom
@@ -329,9 +329,9 @@ cdef class ApolloNet:
         if param_set is None:
             param_set = self.active_param_names()
         for param_name in param_set:
-            print "  ", param_name, ", data=", params[param_name].data_tensor.norm(), ", diff=", params[param_name].diff_tensor.norm() 
+            print "  ", param_name, ", data=", params[param_name].data_tensor.norm(), ", diff=", params[param_name].diff_tensor.norm()
     def update(self, lr, momentum=0., clip_gradients=-1, weight_decay=0.):
-        diffnorm = self.diff_l2_norm() 
+        diffnorm = self.diff_l2_norm()
         clip_scale = 1.
         if clip_gradients > 0:
             if diffnorm > clip_gradients:

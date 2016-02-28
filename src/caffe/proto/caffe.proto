@@ -726,8 +726,10 @@ message CapSequenceParameter {
 message HungarianLossParameter {
   // This parameter sets the strictness of the overlap criterion
   optional float match_ratio = 1 [default = 0.5];
+  optional float height = 2 [default = 240];
+  optional float width = 3 [default = 320];
   // This parameter disallows permutations when set to false
-  optional bool permute_matches = 2 [default = true];
+  optional bool permute_matches = 4 [default = true];
 }
 
 message ParamShapeParameter {
