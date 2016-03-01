@@ -177,6 +177,11 @@ class SPP(Layer):
             else:
                 raise ValueError('Unknown SPP method')
 
+class BN(Layer):
+    def __init__(self, name, **kwargs):
+        super(BN, self).__init__(self, name, kwargs)
+      
+
 
 class Power(Layer):
     def __init__(self, name, **kwargs):
